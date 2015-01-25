@@ -1,4 +1,5 @@
 #include <Adafruit_NeoPixel.h>
+#include <QueueList.h>
 
 #define NUMBER_OF_LEDS_ON_RING 16
 #define NEOPIXEL_RING_DATA_PIN 2
@@ -14,6 +15,9 @@ void setup() {
 
 int x, y, led, previousLed;
 float nx, ny, angle; 
+
+QueueList <int> ledQueue;
+
 void loop(){
 
   x = analogRead(ACCELEROMETER_X_OUTPUT);
@@ -46,14 +50,8 @@ void loop(){
   else 
     led = circularize(previousLed - 1);
 
-  for(int j = 0; j < NUMBER_OF_LEDS_ON_RING; j++)
-    neoring.setPixelColor(j, 0, 0, 0);
-
-  neoring.setPixelColor(circularize(led - 1), 30, 60, 30); 
-  neoring.setPixelColor(circularize(led + 1), 30, 60, 30); 
-  neoring.setPixelColor(led, 100, 255, 100); 
-  neoring.show();
-
+  ledQueue.push(led);
+  makeLightShow();
   previousLed = led;
   delay(25);
 }
@@ -76,7 +74,24 @@ int counterClockwiseDistanceBetweenLeds(int prevPos, int nextPos){
   return(distance); 
 }
 
+int ledPosition, currentQueueSize;
+#define NUMBER_OF_LEDS_TO_SHINE 10
+int brightnessStep = 255/NUMBER_OF_LEDS_TO_SHINE;
 
+void makeLightShow(){
+  for(int j = 0; j < NUMBER_OF_LEDS_ON_RING; j++)
+    neoring.setPixelColor(j, 0, 0, 0);
+    
+  currentQueueSize = ledQueue.count();
+  for(int k = 0; k < currentQueueSize; k++){
+    ledPosition = ledQueue.pop();
+    neoring.setPixelColor(ledPosition, 0, (brightnessStep * k), 0); 
+    if((k == 0 && currentQueueSize < NUMBER_OF_LEDS_TO_SHINE) || k > 0)
+      ledQueue.push(ledPosition);
+      
+  }
+  neoring.show();
+}
 
 
 
